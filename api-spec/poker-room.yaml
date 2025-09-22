@@ -1,0 +1,174 @@
+openapi: 3.0.4
+info:
+  title: poker-room
+  description: Playing cards management with public read access and private write/delete operations via API key authentication.
+  version: 1.0.0
+
+paths:
+  /cards:
+    get:
+      security: []
+      summary: Get all available cards
+      description: Retrieve a list of all playing cards
+      tags:
+        - Cards
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PlayingCard'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    post:
+      summary: Create a new card
+      description: Create a new playing card
+      tags:
+        - Cards
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlayingCard'
+      responses:
+        '201':
+          description: Card created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlayingCard'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /cards/{id}:
+    delete:
+      summary: Delete a card
+      description: Delete a playing card by ID
+      tags:
+        - Cards
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Unique identifier for the card
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Card deleted successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  schemas:
+    PlayingCard:
+      type: object
+      required:
+        - id
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "123e4567-e89b-12d3-a456-426614174000"
+        heading:
+          type: string
+          maxLength: 32
+        label:
+          type: string
+          maxLength: 64
+        sublabel:
+          type: string
+          maxLength: 64
+        content:
+          type: object
+
+    Error:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+          example: "VALIDATION_ERROR"
+        message:
+          type: string
+          example: "Invalid request parameters"
+        details:
+          type: object
+        timestamp:
+          type: string
+          format: date-time
+          example: "2025-09-16T23:15:00Z"
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "VALIDATION_ERROR"
+            message: "Invalid request parameters"
+            timestamp: "2025-09-16T23:15:00Z"
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "NOT_FOUND"
+            message: "Item not found"
+            timestamp: "2025-09-16T23:15:00Z"
+
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "UNAUTHORIZED"
+            message: "API key is missing or invalid"
+            timestamp: "2025-09-16T23:15:00Z"
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "INTERNAL_ERROR"
+            message: "An unexpected error occurred"
+            timestamp: "2025-09-16T23:15:00Z"
+
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+
+security:
+  - ApiKeyAuth: []
+
+tags:
+  - name: Cards
+    description: Operations related to playing cards
+    

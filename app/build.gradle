@@ -8,6 +8,10 @@
 plugins {
     // Apply the application plugin to add support for building a CLI application in Java.
     id 'application'
+    // OpenAPI Generator plugin
+    id 'org.openapi.generator' version '7.1.0'
+    // Shadow JAR plugin
+    id 'com.gradleup.shadow' version '9.0.0'
 }
 
 repositories {
@@ -18,11 +22,31 @@ repositories {
 dependencies {
     // Use JUnit Jupiter for testing.
     testImplementation libs.junit.jupiter
-
+    testImplementation libs.mockito.core
+    testImplementation libs.mockito.junit.jupiter
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
     // This dependency is used by the application.
     implementation libs.guava
+    // Swagger and validation for generated code
+    implementation libs.swagger.annotations
+    implementation libs.validation.api
+    // JAX-RS API
+    implementation libs.javax.jaxrs
+    // Jersey JAX-RS implementation
+    implementation libs.jersey.server
+    implementation libs.jersey.container.servlet
+    // Jackson JSON processing
+    implementation libs.jackson.core
+    implementation libs.jackson.databind
+    implementation libs.jackson.annotations
+    // DynamoDB for persistence
+    implementation libs.aws.dynamodb
+    implementation libs.aws.dynamodb.enhanced
+    implementation libs.aws.annotations
+    // AWS Lambda
+    implementation libs.aws.lambda.java.core
+    implementation libs.aws.lambda.java.events
 }
 
 // Apply a specific Java toolchain to ease working on different environments.
@@ -34,10 +58,42 @@ java {
 
 application {
     // Define the main class for the application.
-    mainClass = 'spades.nine.poker.room.App'
+    mainClass = 'spades.nine.poker.room.CardsApiImpl'
 }
 
 tasks.named('test') {
     // Use JUnit Platform for unit tests.
     useJUnitPlatform()
 }
+
+openApiGenerate {
+    generatorName = "jaxrs-spec"
+    inputSpec = "$rootDir/api-spec/poker-room.yaml"
+    outputDir = "$buildDir/generated"
+    apiPackage = "spades.nine.poker.room.api"
+    modelPackage = "spades.nine.poker.room.model"
+    configOptions = [
+        interfaceOnly: "true",
+        skipDefaultInterface: "true",
+        useTags: "true",
+        dateLibrary: "java8",
+        java8: "true"
+    ]
+}
+
+sourceSets {
+    main {
+        java {
+            srcDir "${buildDir}/generated/src/gen/java"
+        }
+    }
+}
+compileJava.dependsOn tasks.openApiGenerate
+
+shadowJar {
+    archiveClassifier = ''
+    mergeServiceFiles()
+}
+startScripts.dependsOn shadowJar
+startShadowScripts.dependsOn jar
+
