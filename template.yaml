@@ -1,0 +1,79 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Poker Room API - Playing cards management service
+
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 512
+    Runtime: java8.al2
+    Environment:
+      Variables:
+        ENV: !Ref Environment
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues:
+      - dev
+      - prod
+    Description: Environment name
+
+Resources:
+  PokerRoomFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub poker-room-${Environment}
+      CodeUri: app/build/libs/app.jar
+      Handler: spades.nine.poker.room.LambdaHandler
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /{proxy+}
+            Method: ANY
+        RootApiEvent:
+          Type: Api
+          Properties:
+            Path: /
+            Method: ANY
+      Environment:
+        Variables:
+          DYNAMODB_TABLE_NAME: !Sub playing-cards-${Environment}
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Sub playing-cards-${Environment}
+
+  # DynamoDB Table
+  PlayingCardsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub playing-cards-${Environment}
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      BillingMode: PAY_PER_REQUEST
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Project
+          Value: poker-room
+        - Key: Component
+          Value: playing-cards
+
+Outputs:
+  PokerRoomApi:
+    Description: API Gateway endpoint URL for Poker Room function
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/"
+    Export:
+      Name: !Sub poker-room-api-${Environment}
+
+  PokerRoomFunction:
+    Description: Poker Room Lambda Function ARN
+    Value: !GetAtt PokerRoomFunction.Arn
+    Export:
+      Name: !Sub poker-room-function-${Environment}
